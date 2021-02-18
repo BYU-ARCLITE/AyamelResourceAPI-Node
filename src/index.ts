@@ -56,6 +56,7 @@ app.put('/api/v1/resources/:id', async (_, res) => {
 
 app.get('/api/v1/resources/:id', async (req, res) => {
   // TODO: retrieve relations
+  // TODO: handle invalid IDs
   const db = await DBPromise;
   const doc = await db.collection('resources')
     .findOne({"_id": new ObjectID(req.params.id)});
@@ -84,6 +85,7 @@ app.get('/api/v1/relations', async (_, res) => {
 /* Relation Life Cycle Routes */
 
 app.post('/api/v1/relations', async (req, res) => {
+  // TODO: Validate relation fields
   const db = await DBPromise;
   const { insertedId } = await db.collection('relations').
     insertOne(req.body);
@@ -92,12 +94,12 @@ app.post('/api/v1/relations', async (req, res) => {
 });
 
 app.get('/api/v1/relations/:id', async (req, res) => {
-  // TODO: retrieve relations
+  // TODO: handle invalid IDs
   const db = await DBPromise;
   const doc = await db.collection('relations')
     .findOne({"_id": new ObjectID(req.params.id)});
   res.status(200);
-  res.send(JSON.stringify({ status: 200, resource: doc }));
+  res.send(JSON.stringify({ status: 200, relation: doc }));
 });
 
 app.delete('/api/v1/relations/:id', async (req, res) => {
