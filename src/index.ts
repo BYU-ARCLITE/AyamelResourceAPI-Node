@@ -112,4 +112,6 @@ app.delete('/api/v1/relations/:id', async (req, res) => {
   res.send('{"status":204}');
 });
 
-app.listen(server_port);
+app.listen(server_port, () =>
+  console.log(`Resource Library listening on port ${server_port}`)
+);
