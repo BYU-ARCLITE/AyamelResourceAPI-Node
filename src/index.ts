@@ -1,9 +1,12 @@
 import express from 'express';
 import { MongoClient, ObjectID } from 'mongodb';
-import fs from 'fs';
 
-const { db_uri, db_name, server_port } =
-  JSON.parse(fs.readFileSync('../config.json', 'utf8'));
+const port_arg = process.argv.findIndex(s => s === '--port') + 1;
+const server_port = +process.argv[port_arg];
+const uri_arg = process.argv.findIndex(s => s === '--uri') + 1;
+const db_uri = process.argv[uri_arg];
+const name_arg = process.argv.findIndex(s => s === '--db') + 1;
+const db_name = process.argv[name_arg];
 
 const DBPromise = MongoClient.connect(db_uri)
   .then(client => client.db(db_name));
@@ -109,7 +112,4 @@ app.delete('/api/v1/relations/:id', async (req, res) => {
   res.send('{"status":204}');
 });
 
-const port_arg = process.argv.findIndex(s => s === '--port') + 1;
-const cli_port = +process.argv[port_arg];
-
-app.listen(cli_port || server_port);
+app.listen(server_port);
