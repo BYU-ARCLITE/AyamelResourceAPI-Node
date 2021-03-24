@@ -8,8 +8,10 @@ const db_uri = process.argv[uri_arg];
 const name_arg = process.argv.findIndex(s => s === '--db') + 1;
 const db_name = process.argv[name_arg];
 
-const DBPromise = MongoClient.connect(db_uri)
-  .then(client => client.db(db_name));
+const DBPromise = MongoClient.connect(
+  db_uri,
+  { useUnifiedTopology: true },
+).then(client => client.db(db_name));
 
 const app = express();
 
