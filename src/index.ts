@@ -1,5 +1,4 @@
 import express from 'express';
-import bodyParser from 'body-parser';
 import { MongoClient, ObjectID } from 'mongodb';
 import fs from 'fs';
 
@@ -11,7 +10,7 @@ const DBPromise = MongoClient.connect(db_uri)
 
 const app = express();
 
-app.use(bodyParser.json());
+app.use(express.json());
 
 app.get('/api/v1/docs', (_, res) => {
   res.send('Hello World');
@@ -110,4 +109,7 @@ app.delete('/api/v1/relations/:id', async (req, res) => {
   res.send('{"status":204}');
 });
 
-app.listen(server_port);
+const port_arg = process.argv.findIndex(s => s === '--port') + 1;
+const cli_port = +process.argv[port_arg];
+
+app.listen(cli_port || server_port);
