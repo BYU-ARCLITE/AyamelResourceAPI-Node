@@ -34,9 +34,9 @@ export default async function(app: Express, db: Db) {
   });
   
   app.get('/api/v1/resources/:id', async (req, res) => {
-      const id = new ObjectID(req.params.id)
+      const id = req.params.id;
       const docp = db.collection('resources')
-        .findOne({ "_id": id });
+        .findOne({ "_id": new ObjectID(id) });
       const relp = db.collection('relations')
         .find({ $or: [ { subjectId: id }, { objectId: id } ] })
         .toArray();
