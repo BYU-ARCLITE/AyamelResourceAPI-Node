@@ -4,22 +4,11 @@
 # Build & Run
 
 1. Clone the repository.
-2. Run `npm i`
-3. Create a `config.json` file.
-3. Run `npm start`
-
-# Config File Structure
-
-```json
-{
-    "server_port": 80, // or whatever port you want
-    "db_uri": "mongodb://localhost:27017", // or wherever MongoDB is running
-    "db_name": "resource_library" // or whatever the database name is
-}
-```
+2. Navigate into the repository.
+3. Run `npm i && npm run build`
+4. Run `node bin --port {server port} --uri {database URI} --db {database name}`
 
 # API
-
 
 GET `/api/v1/docs`
 Should return documentation, actually just returns 'Hello World'.

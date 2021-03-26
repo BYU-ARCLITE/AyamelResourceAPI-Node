@@ -4,8 +4,7 @@
   "description": "Ayamel Resource Library API",
   "main": "bin/index.js",
   "scripts": {
-    "build": "tsc",
-    "start": "npm run build & node bin"
+    "build": "tsc"
   },
   "author": "Logan R. Kearsley",
   "license": "MIT",
