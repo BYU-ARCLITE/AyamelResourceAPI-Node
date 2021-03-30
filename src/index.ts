@@ -1,4 +1,5 @@
 import express from 'express';
+import cors from 'cors';
 import { MongoClient } from 'mongodb';
 import relations from './relations';
 import resources from './resources';
@@ -19,6 +20,7 @@ const dbp = MongoClient.connect(
 const app = express();
 
 app.use(express.json());
+app.use(cors());
 
 app.get('/api/v1/docs', (_, res) => {
   res.send('Hello World');
