@@ -24,6 +24,8 @@ export default async function(app: Express, db: Db) {
     const doc = await db.collection('relations')
       .findOne({"_id": new ObjectID(req.params.id)});
     if (doc) {
+      doc.id = doc._id;
+      delete doc._id;
       res.status(200);
       res.send(JSON.stringify({ status: 200, relation: doc }));
     } else {

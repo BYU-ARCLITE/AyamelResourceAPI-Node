@@ -42,6 +42,12 @@ export default async function(app: Express, db: Db) {
         .toArray();
       const [doc, rels] = await Promise.all([docp, relp]);
       if (doc) {
+        for (const rel of rels) {
+          rel.id = rel._id;
+          delete rel._id;
+        }
+        doc.id = doc._id;
+        delete doc._id;
         doc.relations = rels;
         res.status(200);
         res.send(JSON.stringify({ status: 200, resource: doc }));
