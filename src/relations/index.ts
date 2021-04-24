@@ -14,8 +14,8 @@ export default async function(app: Express, db: Db) {
   
   app.post('/api/v1/relations', async (req, res) => {
     // TODO: Validate relation fields
-    const { insertedId } = await db.collection('relations').
-      insertOne(req.body);
+    const { insertedId } = await db.collection('relations')
+      .insertOne(req.body);
     res.status(201);
     res.send(JSON.stringify({ status: 201, id: insertedId }));
   });
@@ -24,6 +24,8 @@ export default async function(app: Express, db: Db) {
     const doc = await db.collection('relations')
       .findOne({"_id": new ObjectID(req.params.id)});
     if (doc) {
+      // internal database _id needs to be
+      // translated to external unprefixed id
       doc.id = doc._id;
       delete doc._id;
       res.status(200);

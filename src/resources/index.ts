@@ -37,17 +37,23 @@ export default async function(app: Express, db: Db) {
       const id = req.params.id;
       const docp = db.collection('resources')
         .findOne({ "_id": new ObjectID(id) });
+      // Get all the relations for which this resource
+      // is an argument (subject or object). 
       const relp = db.collection('relations')
         .find({ $or: [ { subjectId: id }, { objectId: id } ] })
         .toArray();
       const [doc, rels] = await Promise.all([docp, relp]);
-      if (doc) {
+      if (doc) {    
+        // internal database _id needs to be
+        // translated to external unprefixed id
         for (const rel of rels) {
           rel.id = rel._id;
           delete rel._id;
         }
         doc.id = doc._id;
         delete doc._id;
+
+        // merge relations into returned resource document
         doc.relations = rels;
         res.status(200);
         res.send(JSON.stringify({ status: 200, resource: doc }));
