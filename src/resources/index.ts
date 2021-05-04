@@ -1,6 +1,10 @@
 import { Express } from 'express';
 import { Db, ObjectID } from 'mongodb';
 
+// TODO: return errors when there are errors
+// TODO: create schemas for documentation and validation
+// TODO: create an function to require authentication
+
 export default async function(app: Express, db: Db) {
 
   app.get('/api/v1/resources', async (_, res) => {
@@ -10,11 +14,14 @@ export default async function(app: Express, db: Db) {
       }));
   });
   
+
+  // TODO: build this
   app.get('/api/v1/resources/search', async (_, res) => {
       res.status(501);
       res.end(JSON.stringify('{"status":501}'));
   });
   
+  // TODO: build this
   app.get('/api/v1/resources/scan', async (_, res) => {
       res.status(501);
       res.end(JSON.stringify('{"status":501}'));
@@ -28,9 +35,19 @@ export default async function(app: Express, db: Db) {
       res.send(JSON.stringify({ status: 201, id: insertedId }));
   });
   
-  app.put('/api/v1/resources/:id', async (_, res) => {
-      res.status(501);
-      res.end(JSON.stringify('{"status":501}'));
+  app.put('/api/v1/resources/:id', async (req, res) => {
+      const id = req.params.id;
+
+      // create an update doc for MongoDB
+      const updateDoc = {
+        $set: {...req.body}
+      }
+
+      const response = await db.collection('resources').
+        updateOne({"_id": new ObjectID(id)}, updateDoc);
+
+      res.status(201);
+      res.send(JSON.stringify({ matches: response.matchedCount, mondified: response.modifiedCount}));
   });
   
   app.get('/api/v1/resources/:id', async (req, res) => {
