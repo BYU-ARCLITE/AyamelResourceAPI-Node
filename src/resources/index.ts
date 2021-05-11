@@ -1,5 +1,6 @@
 import { Express } from 'express';
 import { Db, ObjectID } from 'mongodb';
+import { authorizeRequest } from '../auth';
 
 // TODO: return errors when there are errors
 // TODO: create schemas for documentation and validation
@@ -28,14 +29,14 @@ export default async function(app: Express, db: Db) {
   });
   
   /* Resource Life Cycle Routes */
-  app.post('/api/v1/resources', async (req, res) => {
+  app.post('/api/v1/resources', authorizeRequest, async (req, res) => {
       const { insertedId } = await db.collection('resources').
         insertOne(req.body);
       res.status(201);
       res.send(JSON.stringify({ status: 201, id: insertedId }));
   });
   
-  app.put('/api/v1/resources/:id', async (req, res) => {
+  app.put('/api/v1/resources/:id', authorizeRequest, async (req, res) => {
       const id = req.params.id;
 
       // create an update doc for MongoDB
@@ -80,7 +81,7 @@ export default async function(app: Express, db: Db) {
       }
   });
   
-  app.delete('/api/v1/resources/:id', async (req, res) => {
+  app.delete('/api/v1/resources/:id', authorizeRequest, async (req, res) => {
       await db.collection('resources')
         .deleteOne({"_id": new ObjectID(req.params.id)});
       res.status(204);

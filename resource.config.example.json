@@ -1,0 +1,4 @@
+{
+    "instructions": "Copy this file, change the name to 'resource.config.json', delete the instructions line, and add a unique and secure apiKey",
+    "apiKey": "some key"
+}
