@@ -1,18 +1,23 @@
 import { Express } from 'express';
-import { Db, ObjectID } from 'mongodb';
+import mongoose from 'mongoose';
 import { authorizeRequest } from '../auth';
+import { resourceSchema } from './schema';
+import { relationSchema } from '../relations/schema';
 
-// TODO: return errors when there are errors
-// TODO: create schemas for documentation and validation
-// TODO: create an function to require authentication
+const Resource = mongoose.model('resources', resourceSchema);
+const Relation = mongoose.model('relations', relationSchema);
 
-export default async function(app: Express, db: Db) {
+// TODO: streamline APIs when we can update Ayamel (specifically returning strings instead of JSON, and adding the http status into the response data)
+
+export default async function(app: Express) {
 
   app.get('/api/v1/resources', async (_, res) => {
-      res.send(JSON.stringify({
-        status: 200,
-        ids: await db.collection('resources').distinct('_id'),
-      }));
+    Resource.find().distinct('_id', function (err: Error, resources: string[]) {
+      if(err) {res.status(500).send(JSON.stringify({status: 500, ...err}));}
+      else {
+        res.status(200).send(JSON.stringify({status: 200, ids: resources}));
+      }
+    });
   });
   
 
@@ -30,37 +35,43 @@ export default async function(app: Express, db: Db) {
   
   /* Resource Life Cycle Routes */
   app.post('/api/v1/resources', authorizeRequest, async (req, res) => {
-      const { insertedId } = await db.collection('resources').
-        insertOne(req.body);
-      res.status(201);
-      res.send(JSON.stringify({ status: 201, id: insertedId }));
+      Resource.create(req.body, function (err, resource) {
+        if (err) { res.status(500).send(JSON.stringify({status: 500, err})); }
+        else {
+          res.status(200);
+          res.send(JSON.stringify({status: 200, id: resource._id}));
+        }
+      });
   });
   
   app.put('/api/v1/resources/:id', authorizeRequest, async (req, res) => {
       const id = req.params.id;
-
-      // create an update doc for MongoDB
-      const updateDoc = {
-        $set: {...req.body}
-      }
-
-      const response = await db.collection('resources').
-        updateOne({"_id": new ObjectID(id)}, updateDoc);
-
-      res.status(201);
-      res.send(JSON.stringify({ matches: response.matchedCount, mondified: response.modifiedCount}));
+      Resource.findByIdAndUpdate(id, req.body, {runValidators: true}, function (err) {
+        if (err) {
+          res.status(500).send(JSON.stringify({status: 500, error: err}));
+        }
+        else {
+          res.status(204).send(JSON.stringify({status: 204}));
+        }
+      });
   });
   
   app.get('/api/v1/resources/:id', async (req, res) => {
       const id = req.params.id;
-      const docp = db.collection('resources')
-        .findOne({ "_id": new ObjectID(id) });
+      const docp = Resource.findById(id);
       // Get all the relations for which this resource
       // is an argument (subject or object). 
-      const relp = db.collection('relations')
-        .find({ $or: [ { subjectId: id }, { objectId: id } ] })
-        .toArray();
-      const [doc, rels] = await Promise.all([docp, relp]);
+      const relp = Relation
+        .find({ $or: [ { subjectId: id }, { objectId: id } ] });
+      let doc, rels;
+
+      try {
+        [doc, rels] = await Promise.all([docp, relp]);
+      } catch(err) {
+        res.status(500).send(JSON.stringify({status: 500, error: err}));
+        return;
+      }
+
       if (doc) {    
         // internal database _id needs to be
         // translated to external unprefixed id
@@ -77,14 +88,19 @@ export default async function(app: Express, db: Db) {
         res.send(JSON.stringify({ status: 200, resource: doc }));
       } else {
         res.status(404);
-        res.send('{"status":404}');
+        res.send(JSON.stringify({status:404}));
       }
   });
   
   app.delete('/api/v1/resources/:id', authorizeRequest, async (req, res) => {
-      await db.collection('resources')
-        .deleteOne({"_id": new ObjectID(req.params.id)});
-      res.status(204);
-      res.send('{"status":204}');
+      Resource.findByIdAndDelete(req.params.id, null, function (err) {
+        if(err) {
+          res.status(500).send(JSON.stringify({status: 500, error: err}));
+        }
+        else {
+          res.status(204);
+          res.send(JSON.stringify({status:204}));
+        }
+      });
   });
 };
