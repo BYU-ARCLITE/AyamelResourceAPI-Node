@@ -3,7 +3,7 @@ import { relationSchema } from '../relations/schema';
 
 export const resourceSchema = new mongoose.Schema({
   title: {type: String, required: true, maxLength: 1000},
-  contentType: {type: String, enum: ['video', 'audio', 'image', 'document', 'archive', 'collection', 'data'], required: true},
+  type: {type: String, enum: ['video', 'audio', 'image', 'document', 'archive', 'collection', 'data'], required: true},
   description: {type: String, maxLength: 1000},
   keywords: [{type: String, maxLength: 1000}],
   languages: {
