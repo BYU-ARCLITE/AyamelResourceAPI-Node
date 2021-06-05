@@ -34,12 +34,16 @@ export default async function(app: Express) {
   });
   
   /* Resource Life Cycle Routes */
+
+  /**
+   * POST takes a resource object (see schema), and returns a object with status, id, and a contentUploadUrl string used by the GUI
+   */
   app.post('/api/v1/resources', authorizeRequest, async (req, res) => {
       Resource.create(req.body, function (err, resource) {
         if (err) { res.status(500).send(JSON.stringify({status: 500, err})); }
         else {
           res.status(200);
-          res.send(JSON.stringify({status: 200, id: resource._id}));
+          res.send(JSON.stringify({status: 200, id: resource._id, contentUploadUrl: `resource-${resource._id}`}));
         }
       });
   });
