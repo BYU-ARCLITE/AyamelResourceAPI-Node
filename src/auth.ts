@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 
 const url = require('url');
 const apiKey = require('../resource.config.json').apiKey;
+const apiKeyParam = "_key"
 
 /**
  * Function to validate that requests come with a valid apiKey (matching the one in resource.config.json).
@@ -14,7 +15,7 @@ const apiKey = require('../resource.config.json').apiKey;
 export function authorizeRequest(req: Request, res: Response, next: NextFunction) {
     const queryObj = url.parse(req.url, true).query;
 
-    if(queryObj._apiKey !== apiKey) {
+    if(queryObj[apiKeyParam] !== apiKey) {
         res.status(401);
         res.send(JSON.stringify({ status: 401, err: "Request did not contain a valid API key" }));
     }

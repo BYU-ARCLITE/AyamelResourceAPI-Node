@@ -35,18 +35,30 @@ export default async function(app: Express) {
   
   /* Resource Life Cycle Routes */
 
-  /**
-   * POST takes a resource object (see schema), and returns a object with status, id, and a contentUploadUrl string used by the GUI
+   /**
+   * Dummy route because GUI wants a content upload URL, even when we're just copying a YouTube link
+   * TO DO: remove the upload content requirement from the GUI, so that YouTube (or other web) links no longer have to post to an dummy file upload link
    */
-  app.post('/api/v1/resources', authorizeRequest, async (req, res) => {
-      Resource.create(req.body, function (err, resource) {
-        if (err) { res.status(500).send(JSON.stringify({status: 500, err})); }
-        else {
-          res.status(200);
-          res.send(JSON.stringify({status: 200, id: resource._id, contentUploadUrl: `resource-${resource._id}`}));
-        }
-      });
+    app.post('/api/v1/resources/:id/content/:token', authorizeRequest, async (req, res) => {
+      return res.status(200).send({
+        status: 200,
+        id: req.params.id
+      })
   });
+
+  /**
+   * POST takes a resource object (see schema), and returns a object with status, id, and a contentUploadUrl string used by the GUI to fake uploading content (see post '/api/v1/resources/:id/content/:token')
+   */
+
+  app.post('/api/v1/resources', authorizeRequest, async (req, res) => {
+    Resource.create(req.body, function (err, resource) {
+      if (err) { res.status(500).send(JSON.stringify({status: 500, err})); }
+      else {
+        res.status(200);
+        res.send(JSON.stringify({status: 200, resource: {id: resource._id}, contentUploadUrl: `/api/v1/resources/${resource._id}/content/dummytoken-${resource._id}`}));
+      }
+    });
+});
   
   app.put('/api/v1/resources/:id', authorizeRequest, async (req, res) => {
       const id = req.params.id;
