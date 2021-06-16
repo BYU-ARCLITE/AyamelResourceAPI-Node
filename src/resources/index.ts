@@ -42,7 +42,9 @@ export default async function(app: Express) {
     app.post('/api/v1/resources/:id/content/:token', authorizeRequest, async (req, res) => {
       return res.status(200).send({
         status: 200,
-        id: req.params.id
+        resource: {
+          id: req.params.id
+        }
       })
   });
 
