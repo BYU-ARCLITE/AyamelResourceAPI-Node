@@ -44,9 +44,9 @@ export default async function(app: Express) {
    * Endpoint for setting remote file metadata
    */
   app.post('/api/v1/resources/:id/content/:token', authorizeRequest, async (req, res) => {
-    let files = req.body?.remoteFiles || [];
-    files = files?.map((file: any) => {
-      if (!file?.mime && file?.mimeType) {
+    let files = req.body.remoteFiles || [];
+    files = files.map((file: any) => {
+      if (!file.mime && file.mimeType) {
         // copy mimetype
         // The ayamel player requires mime to be set but
         // the backend does not set a mime field.
