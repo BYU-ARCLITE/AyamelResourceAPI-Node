@@ -70,7 +70,7 @@ export default async function(app: Express) {
   });
 
   /**
-   * POST takes a resource object (see schema), and returns a object with status, id, and a contentUploadUrl string used by the GUI to fake uploading content (see post '/api/v1/resources/:id/content/:token')
+   * POST takes a resource object (see schema), and returns a object with status, id, and a contentUploadUrl string used by the GUI (see post '/api/v1/resources/:id/content/:token')
    */
 
   app.post('/api/v1/resources', authorizeRequest, async (req, res) => {
@@ -83,14 +83,17 @@ export default async function(app: Express) {
     });
   });
 
+  /**
+   * Update a resource
+   */
   app.put('/api/v1/resources/:id', authorizeRequest, async (req, res) => {
       const id = req.params.id;
-      Resource.findByIdAndUpdate(id, req.body, {runValidators: true}, function (err) {
+      Resource.findByIdAndUpdate(id, req.body, {runValidators: true, new: true}, function (err, resource) {
         if (err) {
           res.status(500).send(JSON.stringify({status: 500, error: err}));
         }
         else {
-          res.status(204).send(JSON.stringify({status: 204}));
+          res.status(200).send(JSON.stringify({status: 204, resource: resource}));
         }
       });
   });
