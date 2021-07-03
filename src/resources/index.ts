@@ -88,12 +88,12 @@ export default async function(app: Express) {
    */
   app.put('/api/v1/resources/:id', authorizeRequest, async (req, res) => {
       const id = req.params.id;
-      Resource.findByIdAndUpdate(id, req.body, {runValidators: true, new: true}, function (err, resource) {
+      Resource.findByIdAndUpdate(id, req.body, {runValidators: true}, function (err) {
         if (err) {
           res.status(500).send(JSON.stringify({status: 500, error: err}));
         }
         else {
-          res.status(200).send(JSON.stringify({status: 204, resource: resource}));
+          res.status(200).send(JSON.stringify({status: 200}));
         }
       });
   });
