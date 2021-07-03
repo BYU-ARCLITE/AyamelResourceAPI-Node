@@ -70,7 +70,7 @@ export default async function(app: Express) {
   });
 
   /**
-   * POST takes a resource object (see schema), and returns a object with status, id, and a contentUploadUrl string used by the GUI (see post '/api/v1/resources/:id/content/:token')
+   * POST takes a resource object (see schema), and returns a object with status, id, and a contentUploadUrl string used by the GUI to set file metadata (see post '/api/v1/resources/:id/content/:token')
    */
 
   app.post('/api/v1/resources', authorizeRequest, async (req, res) => {
