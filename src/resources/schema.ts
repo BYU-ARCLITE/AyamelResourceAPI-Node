@@ -1,14 +1,14 @@
 import mongoose from 'mongoose';
 import { relationSchema } from '../relations/schema';
 
-export const resourceSchema = new mongoose.Schema({
+const resourceSchema = new mongoose.Schema({
   title: {type: String, required: true, maxLength: 1000},
   type: {type: String, enum: ['video', 'audio', 'image', 'document', 'archive', 'collection', 'data'], required: true},
   description: {type: String, maxLength: 1000},
   keywords: [{type: String, maxLength: 1000}],
   languages: {
     iso639_3: [String],
-    bcp47: [String]
+    bcp47: [String],
   },
   topics: [String],
   formats: [String],
@@ -73,3 +73,13 @@ export const resourceSchema = new mongoose.Schema({
   status: String,
   relations: [{type: relationSchema, required: false}],
 }, {timestamps: {createdAt: 'dateAdded', updatedAt: 'dateModified'}});
+
+resourceSchema.pre('save', function(this: any, next: any) {
+  if (this.languages && this.languages.iso639_3) {
+    // filter out empty strings
+    this.languages.iso639_3 = this.languages.iso639_3.map((lang: string) => lang || "zxx")
+  }
+  next();
+});
+
+export { resourceSchema };

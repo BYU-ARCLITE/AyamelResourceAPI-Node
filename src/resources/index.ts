@@ -55,7 +55,7 @@ export default async function(app: Express) {
       return file;
     });
 
-    Resource.findByIdAndUpdate(req.params.id, { $set: { "content.files": files } }, { new: true }, (err, resource) => {
+    Resource.findByIdAndUpdate(req.params.id, { $set: { 'content.files': files } }, { new: true }, (err, resource) => {
       if (err) {
         res.status(500).send(JSON.stringify({status: 500, error: err}));
       }
@@ -138,8 +138,8 @@ export default async function(app: Express) {
           res.status(500).send(JSON.stringify({status: 500, error: err}));
         }
         else {
-          res.status(204);
-          res.send(JSON.stringify({status:204}));
+          res.status(200);
+          res.send(JSON.stringify({status:200}));
         }
       });
   });
