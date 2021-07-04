@@ -74,8 +74,8 @@ export default async function(app: Express) {
         res.status(500).send(JSON.stringify({status: 500, error: err}));
       }
       else {
-        res.status(204);
-        res.send(JSON.stringify({status:204}));
+        res.status(200);
+        res.send(JSON.stringify({status:200}));
       }
     });
   });
