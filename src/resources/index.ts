@@ -55,22 +55,27 @@ export default async function(app: Express) {
       return file;
     });
 
-    Resource.findByIdAndUpdate(req.params.id, { $set: { 'content.files': files } }, { new: true }, (err, resource) => {
-      if (err) {
-        res.status(500).send(JSON.stringify({status: 500, error: err}));
-      }
-      else {
-        fixId(resource);
-        res.status(200).send({
-          status: 200,
-          resource: resource,
-        })
-      }
-    });
+    try {
+      const resource = await Resource.findByIdAndUpdate(
+        req.params.id,
+        { $set: { 'content.files': files } },
+        { new: true },
+      );
+
+      fixId(resource);
+      res.status(200).send({
+        status: 200,
+        resource: resource,
+      });
+    } catch (err) {
+      res.status(500).send(JSON.stringify({status: 500, error: err}));
+    }
   });
 
   /**
-   * POST takes a resource object (see schema), and returns a object with status, id, and a contentUploadUrl string used by the GUI to fake uploading content (see post '/api/v1/resources/:id/content/:token')
+   * POST takes a resource object (see schema), and returns a object with status,
+   * id, and a contentUploadUrl string used by the GUI to update file lists.
+   * (see post '/api/v1/resources/:id/content/:token')
    */
 
   app.post('/api/v1/resources', authorizeRequest, async (req, res) => {
@@ -78,66 +83,80 @@ export default async function(app: Express) {
       if (err) { res.status(500).send(JSON.stringify({status: 500, err})); }
       else {
         res.status(200);
-        res.send(JSON.stringify({status: 200, resource: {id: resource._id}, contentUploadUrl: `/api/v1/resources/${resource._id}/content/dummytoken-${resource._id}`}));
+        res.send(JSON.stringify({
+          status: 200,
+          resource: { id: resource._id },
+          contentUploadUrl: `/api/v1/resources/${resource._id}/content/dummytoken-${resource._id}`,
+        }));
       }
     });
   });
 
   app.put('/api/v1/resources/:id', authorizeRequest, async (req, res) => {
-      const id = req.params.id;
-      Resource.findByIdAndUpdate(id, req.body, {runValidators: true}, function (err) {
-        if (err) {
-          res.status(500).send(JSON.stringify({status: 500, error: err}));
-        }
-        else {
-          res.status(204).send(JSON.stringify({status: 204}));
-        }
-      });
+    const id = req.params.id;
+    Resource.findByIdAndUpdate(id, req.body, {runValidators: true}, function (err) {
+      if (err) {
+        res.status(500).send(JSON.stringify({status: 500, error: err}));
+      }
+      else {
+        res.status(200).send(JSON.stringify({status: 200}));
+      }
+    });
   });
 
   app.get('/api/v1/resources/:id', async (req, res) => {
-      const id = req.params.id;
-      const docp = Resource.findById(id);
-      // Get all the relations for which this resource
-      // is an argument (subject or object).
-      const relp = Relation
-        .find({ $or: [ { subjectId: id }, { objectId: id } ] });
-      let doc, rels;
+    const id = req.params.id;
+    const docp = Resource.findById(id);
+    // Get all the relations for which this resource
+    // is an argument (subject or object).
+    const relp = Relation
+      .find({ $or: [ { subjectId: id }, { objectId: id } ] });
+    let doc, rels;
 
-      try {
-        [doc, rels] = await Promise.all([docp, relp]);
-      } catch(err) {
-        res.status(500).send(JSON.stringify({status: 500, error: err}));
-        return;
+    try {
+      [doc, rels] = await Promise.all([docp, relp]);
+    } catch(err) {
+      res.status(500).send(JSON.stringify({status: 500, error: err}));
+      return;
+    }
+
+    if (doc) {
+      // internal database _id needs to be
+      // translated to external unprefixed id
+      for (const rel of rels) {
+        fixId(rel);
       }
+      fixId(doc);
 
-      if (doc) {
-        // internal database _id needs to be
-        // translated to external unprefixed id
-        for (const rel of rels) {
-          fixId(rel);
-        }
-        fixId(doc);
-
-        // merge relations into returned resource document
-        doc.relations = rels;
-        res.status(200);
-        res.send(JSON.stringify({ status: 200, resource: doc }));
-      } else {
-        res.status(404);
-        res.send(JSON.stringify({status:404}));
-      }
+      // merge relations into returned resource document
+      doc.relations = rels;
+      res.status(200);
+      res.send(JSON.stringify({ status: 200, resource: doc }));
+    } else {
+      res.status(404);
+      res.send(JSON.stringify({status: 404}));
+    }
   });
 
   app.delete('/api/v1/resources/:id', authorizeRequest, async (req, res) => {
-      Resource.findByIdAndDelete(req.params.id, null, function (err) {
-        if(err) {
-          res.status(500).send(JSON.stringify({status: 500, error: err}));
-        }
-        else {
-          res.status(200);
-          res.send(JSON.stringify({status:200}));
-        }
-      });
+    const id = req.params.id;
+    try {  
+      // Get the ids of all relations for which this
+      // resource is an argument (subject or object).
+      const relIds: { _id: string }[] = await Relation
+        .find({ $or: [ { subjectId: id }, { objectId: id } ] })
+        .select('_id');
+
+      // delete all associated relations
+      await Promise.all(relIds.map(({ _id }) => Relation.findByIdAndDelete(_id)));
+
+      // delete the actual resource
+      await Resource.findByIdAndDelete(id);
+
+      res.status(200);
+      res.send(JSON.stringify({status: 200}));
+    } catch (err) {
+        res.status(500).send(JSON.stringify({status: 500, error: err}));
+    }
   });
 };
