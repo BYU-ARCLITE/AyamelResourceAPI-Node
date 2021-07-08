@@ -7,7 +7,7 @@ const Relation = mongoose.model('relations', relationSchema);
 
 export default async function(app: Express) {
 
-  app.get('/api/v1/relations', async (_, res) => {
+  app.get('/api/v1/relations', (_, res) => {
     Relation.find().distinct('_id', function (err: Error, relations: string[]) {
       if(err) {res.status(400).send(JSON.stringify({status: 400, error: err}));}
       else {
@@ -18,7 +18,7 @@ export default async function(app: Express) {
   
   /* Relation Life Cycle Routes */
   
-  app.post('/api/v1/relations', authorizeRequest, async (req, res) => {
+  app.post('/api/v1/relations', authorizeRequest, (req, res) => {
     // TODO: Validate relation fields
     Relation.create(req.body, function(err, relation) {
       if (err) {
@@ -29,10 +29,9 @@ export default async function(app: Express) {
         res.send(JSON.stringify({ status: 201, id: relation._id }));
       }
     });
-    
   });
 
-  app.put('/api/v1/relations/:id', authorizeRequest, async (req, res) => {
+  app.put('/api/v1/relations/:id', authorizeRequest, (req, res) => {
     const id = req.params.id;
     Relation.findByIdAndUpdate(id, req.body, {runValidators: true}, function (err) {
       if (err) {
@@ -42,10 +41,10 @@ export default async function(app: Express) {
         res.status(204).send(JSON.stringify({status: 204}));
       }
     });
-});
+  });
 
   
-  app.get('/api/v1/relations/:id', async (req, res) => {
+  app.get('/api/v1/relations/:id', (req, res) => {
     Relation.findById(req.params.id, function (err: CallbackError, doc: any) {
       if (err) {
         res.status(500);
@@ -65,18 +64,24 @@ export default async function(app: Express) {
         res.send('{"status":404}');
       }
     });
-    
   });
   
   app.delete('/api/v1/relations/:id', authorizeRequest, async (req, res) => {
-    await Relation.findByIdAndDelete(req.params.id, null, function (err) {
-      if(err) {
-        res.status(500).send(JSON.stringify({status: 500, error: err}));
+    const id = req.params.id;
+    try {
+      const count: number = await Relation.countDocuments({ _id: id });
+      if (count === 0) {
+        res.status(404);
+        res.send(JSON.stringify({status: 404}));
+        return;
       }
-      else {
-        res.status(200);
-        res.send(JSON.stringify({status:200}));
-      }
-    });
+
+      await Relation.findByIdAndDelete(id);
+
+      res.status(200);
+      res.send(JSON.stringify({status:200}));
+    } catch (err) {
+      res.status(500).send(JSON.stringify({status: 500, error: err}));
+    }
   });
 };
