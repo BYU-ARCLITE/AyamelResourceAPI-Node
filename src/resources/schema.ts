@@ -3,12 +3,26 @@ import { relationSchema } from '../relations/schema';
 
 const resourceSchema = new mongoose.Schema({
   title: {type: String, required: true, maxLength: 1000},
-  type: {type: String, enum: ['video', 'audio', 'image', 'document', 'archive', 'collection', 'data'], required: true},
+  type: {
+    type: String,
+    enum: [
+      'video',
+      'audio',
+      'image',
+      'document',
+      'archive',
+      'collection',
+      'data',
+    ],
+    required: true,
+  },
   description: {type: String, maxLength: 1000},
   keywords: [{type: String, maxLength: 1000}],
   languages: {
     iso639_3: [String],
+    iso639_2: [String],
     bcp47: [String],
+    rfc5646: [String],
   },
   topics: [String],
   formats: [String],
@@ -20,7 +34,17 @@ const resourceSchema = new mongoose.Schema({
   functionalDomains: [String],
   visibility: [String],
   copryright: {type: String, maxLength: 1000},
-  license: {type: String, enum: ['CC BY', 'CC BY-ND', 'CC BY-NC', 'CC BY-NC-SA', 'CC BY-NC-ND', 'youtube']},
+  license: {
+    type: String,
+    enum: [
+      'CC BY',
+      'CC BY-ND',
+      'CC BY-NC',
+      'CC BY-NC-SA',
+      'CC BY-NC-ND',
+      'youtube',
+    ],
+  },
   origin: {
     creator: {type: String, maxLength: 1000},
     location: {type: String, maxLength: 1000},
@@ -74,11 +98,23 @@ const resourceSchema = new mongoose.Schema({
   relations: [{type: relationSchema, required: false}],
 }, {timestamps: {createdAt: 'dateAdded', updatedAt: 'dateModified'}});
 
-resourceSchema.pre('save', function(this: any, next: any) {
-  if (this.languages && this.languages.iso639_3) {
-    // filter out empty strings
-    this.languages.iso639_3 = this.languages.iso639_3.map((lang: string) => lang || "zxx")
-  }
+resourceSchema.pre('save', function(this: any, next) {
+  // TODO: automatic code conversion
+  const languages = this.languages || {};
+  let iso639_3 = languages.iso639_3 || [];
+
+  // TODO: proper code validation
+  // currently just filters out empty strings and
+  // ensures 'zxx' doesn't co-exist with other codes.
+  iso639_3 = iso639_3.flatMap((lang: string) => (lang && (lang !== 'zxx')) ? [lang] : []);
+  iso639_3 = [...new Set(iso639_3)]; // remove any duplicates
+
+  // Ensure some language code always exists.
+  if (!iso639_3.length) iso639_3 = ['zxx'];
+
+  languages.iso639_3 = iso639_3;
+  this.languages = languages;
+
   next();
 });
 
