@@ -16,7 +16,7 @@ export default async function(app: Express) {
     delete doc._id;
   }
 
-  app.get('/api/v1/resources', async (_, res) => {
+  app.get('/api/v1/resources', (_, res) => {
     Resource.find().distinct('_id', function (err: Error, resources: string[]) {
       if(err) {res.status(500).send(JSON.stringify({status: 500, ...err}));}
       else {
@@ -27,15 +27,15 @@ export default async function(app: Express) {
 
 
   // TODO: build this
-  app.get('/api/v1/resources/search', async (_, res) => {
-      res.status(501);
-      res.end(JSON.stringify('{"status":501}'));
+  app.get('/api/v1/resources/search', (_, res) => {
+    res.status(501);
+    res.end(JSON.stringify({'status': 501}));
   });
 
   // TODO: build this
-  app.get('/api/v1/resources/scan', async (_, res) => {
-      res.status(501);
-      res.end(JSON.stringify('{"status":501}'));
+  app.get('/api/v1/resources/scan', (_, res) => {
+    res.status(501);
+    res.end(JSON.stringify({'status': 501}));
   });
 
   /* Resource Life Cycle Routes */
@@ -78,7 +78,7 @@ export default async function(app: Express) {
    * (see post '/api/v1/resources/:id/content/:token')
    */
 
-  app.post('/api/v1/resources', authorizeRequest, async (req, res) => {
+  app.post('/api/v1/resources', authorizeRequest, (req, res) => {
     Resource.create(req.body, function (err, resource) {
       if (err) { res.status(500).send(JSON.stringify({status: 500, err})); }
       else {
@@ -143,7 +143,14 @@ export default async function(app: Express) {
 
   app.delete('/api/v1/resources/:id', authorizeRequest, async (req, res) => {
     const id = req.params.id;
-    try {  
+    try {
+      const count: number = await Resource.countDocuments({ _id: id });
+      if (count === 0) {
+        res.status(404);
+        res.send(JSON.stringify({status: 404}));
+        return;
+      }
+
       // Get the ids of all relations for which this
       // resource is an argument (subject or object).
       const relIds: { _id: string }[] = await Relation
