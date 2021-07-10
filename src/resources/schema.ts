@@ -106,7 +106,7 @@ resourceSchema.pre('save', function(this: any, next) {
   // TODO: proper code validation
   // currently just filters out empty strings and
   // ensures 'zxx' doesn't co-exist with other codes.
-  iso639_3 = iso639_3.flatMap((lang: string) => (lang && (lang !== 'zxx')) ? [lang] : []);
+  iso639_3 = iso639_3.filter((lang: string) => lang && (lang !== 'zxx'));
   iso639_3 = [...new Set(iso639_3)]; // remove any duplicates
 
   // Ensure some language code always exists.
