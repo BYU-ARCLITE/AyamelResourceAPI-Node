@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import { authorizeRequest } from '../auth';
 import { resourceSchema } from './schema';
 import { relationSchema } from '../relations/schema';
+import { fixId } from '../utils';
 
 const Resource = mongoose.model('resources', resourceSchema);
 const Relation = mongoose.model('relations', relationSchema);
@@ -10,11 +11,6 @@ const Relation = mongoose.model('relations', relationSchema);
 // TODO: streamline APIs when we can update Ayamel (specifically returning strings instead of JSON, and adding the http status into the response data)
 
 export default async function(app: Express) {
-
-  function fixId(doc: any) {
-    doc.id = doc._id;
-    delete doc._id;
-  }
 
   app.get('/api/v1/resources', (_, res) => {
     Resource.find().distinct('_id', function (err: Error, resources: string[]) {

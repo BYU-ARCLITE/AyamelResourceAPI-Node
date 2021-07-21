@@ -2,22 +2,36 @@ import { Express } from 'express';
 import mongoose, { CallbackError } from 'mongoose';
 import { authorizeRequest } from '../auth';
 import { relationSchema } from './schema';
+import { fixId } from '../utils';
 
 const Relation = mongoose.model('relations', relationSchema);
 
 export default async function(app: Express) {
 
-  app.get('/api/v1/relations', (_, res) => {
-    Relation.find().distinct('_id', function (err: Error, relations: string[]) {
+  /**
+   * Get relations for a resource.
+   *
+   * Query params:
+   * subjectId | objectId | id : resourceId
+   */
+  app.get('/api/v1/relations', (req, res) => {
+    let resourceId = req.query.subjectId || req.query.objectId || req.query.id
+
+    if (!resourceId) {
+      res.status(400).send(JSON.stringify({status: 400, error: "Invalid id key."}));
+      return;
+    }
+
+    Relation.find({$or: [{subjectId: resourceId}, {objectId: resourceId}]}, function (err: Error, relations: any[]) {
       if(err) {res.status(400).send(JSON.stringify({status: 400, error: err}));}
       else {
-        res.status(200).send(JSON.stringify({status: 200, ids: relations}));
+        res.status(200).send(JSON.stringify({status: 200, relations: relations.map(fixId)}));
       }
     });
   });
-  
+
   /* Relation Life Cycle Routes */
-  
+
   app.post('/api/v1/relations', authorizeRequest, (req, res) => {
     // TODO: Validate relation fields
     Relation.create(req.body, function(err, relation) {
@@ -43,7 +57,7 @@ export default async function(app: Express) {
     });
   });
 
-  
+
   app.get('/api/v1/relations/:id', (req, res) => {
     Relation.findById(req.params.id, function (err: CallbackError, doc: any) {
       if (err) {
@@ -65,7 +79,7 @@ export default async function(app: Express) {
       }
     });
   });
-  
+
   app.delete('/api/v1/relations/:id', authorizeRequest, async (req, res) => {
     const id = req.params.id;
     try {
