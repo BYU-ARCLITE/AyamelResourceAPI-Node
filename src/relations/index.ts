@@ -12,17 +12,32 @@ export default async function(app: Express) {
    * Get relations for a resource.
    *
    * Query params:
-   * subjectId | objectId | id : resourceId
+   * subjectId : search for the resource id in the subjectId field
+   * objectId : search for the resource id in the objectId field
+   * id : search for the resource id in the subjectId and objectId fields
+   *
+   * Any combination of the above may be provided.
+   * The id param overrides the others.
    */
   app.get('/api/v1/relations', (req, res) => {
-    let resourceId = req.query.subjectId || req.query.objectId || req.query.id
+    let query = {};
+    if (req.query.subjectId) {
+      query.subjectId = req.query.subjectId;
+    }
+    if (req.query.objectId) {
+      query.subjectId = req.query.objectId;
+    }
+    if (req.query.id) {
+      query.subjectId = req.query.id;
+      query.objectId = req.query.id;
+    }
 
-    if (!resourceId) {
+    if (query.entries.length === 0) {
       res.status(400).send(JSON.stringify({status: 400, error: "Invalid id key."}));
       return;
     }
 
-    Relation.find({$or: [{subjectId: resourceId}, {objectId: resourceId}]}, function (err: Error, relations: any[]) {
+    Relation.find({$or: query.entries}, function (err: Error, relations: any[]) {
       if(err) {res.status(400).send(JSON.stringify({status: 400, error: err}));}
       else {
         res.status(200).send(JSON.stringify({status: 200, relations: relations.map(fixId)}));
