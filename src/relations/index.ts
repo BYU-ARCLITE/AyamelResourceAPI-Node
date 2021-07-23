@@ -39,8 +39,6 @@ export default async function(app: Express) {
       }
     }
 
-    console.log("outputting search lmao!");
-    console.log(search);
     ["subjectId", "objectId", "id"].forEach(field => constructQuery(field as Fields | "id", req.query));
 
     const query: MongoRelationsSearch[] = Object.entries(search).map((e: [string, IdSearchValue | undefined]) => { return { [e[0]]: e[1] } });
@@ -49,8 +47,6 @@ export default async function(app: Express) {
       return;
     }
 
-    console.log("made query");
-    console.log(query)
     Relation.find({$or: query}, function (err: Error, relations: any[]) {
       if(err) {res.status(400).send(JSON.stringify({status: 400, error: err}));}
       else {
