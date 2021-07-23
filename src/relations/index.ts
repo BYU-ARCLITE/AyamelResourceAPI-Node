@@ -20,24 +20,38 @@ export default async function(app: Express) {
    * The id param overrides the others.
    */
   app.get('/api/v1/relations', (req, res) => {
-    let query = {};
-    if (req.query.subjectId) {
-      query.subjectId = req.query.subjectId;
-    }
-    if (req.query.objectId) {
-      query.subjectId = req.query.objectId;
-    }
-    if (req.query.id) {
-      query.subjectId = req.query.id;
-      query.objectId = req.query.id;
+    type IdSearchValue = string | { $in: string[] };
+    type MongoRelationsSearch = {
+      subjectId?: IdSearchValue;
+      objectId?: IdSearchValue;
+    };
+    type Fields = "subjectId" | "objectId";
+
+    let search: MongoRelationsSearch = {};
+
+    function constructQuery(field: Fields | "id", queryParams: any) {
+      const fieldNames: Fields[] = field === "id" ? ["subjectId", "objectId"] : [field];
+      if (typeof queryParams[field] === "string") {
+        fieldNames.forEach(n => search[n] = queryParams[field]);
+      }
+      else if (Array.isArray(queryParams[field])) {
+        fieldNames.forEach(n => search[n] = { $in: queryParams[field] });
+      }
     }
 
-    if (query.entries.length === 0) {
+    console.log("outputting search lmao!");
+    console.log(search);
+    ["subjectId", "objectId", "id"].forEach(field => constructQuery(field as Fields | "id", req.query));
+
+    const query: MongoRelationsSearch[] = Object.entries(search).map((e: [string, IdSearchValue | undefined]) => { return { [e[0]]: e[1] } });
+    if (query.length === 0) {
       res.status(400).send(JSON.stringify({status: 400, error: "Invalid id key."}));
       return;
     }
 
-    Relation.find({$or: query.entries}, function (err: Error, relations: any[]) {
+    console.log("made query");
+    console.log(query)
+    Relation.find({$or: query}, function (err: Error, relations: any[]) {
       if(err) {res.status(400).send(JSON.stringify({status: 400, error: err}));}
       else {
         res.status(200).send(JSON.stringify({status: 200, relations: relations.map(fixId)}));
