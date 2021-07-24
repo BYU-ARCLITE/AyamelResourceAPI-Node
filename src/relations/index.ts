@@ -9,48 +9,88 @@ const Relation = mongoose.model('relations', relationSchema);
 export default async function(app: Express) {
 
   /**
-   * Get relations for a resource.
+   * Get relations for a resource, or resources
    *
    * Query params:
    * subjectId : search for the resource id in the subjectId field
    * objectId : search for the resource id in the objectId field
-   * id : search for the resource id in the subjectId and objectId fields
-   *
+   * id : search for the resource id in the subjectId or objectId fields
+   * 
    * Any combination of the above may be provided.
-   * The id param overrides the others.
+   *
+   * If subjectId and objectId are both provided, both
+   * fields must match for a relation to be returned.
    */
-  app.get('/api/v1/relations', (req, res) => {
-    type IdSearchValue = string | { $in: string[] };
+
+  function normalizeParam(field: string, queryParams: any): string[] {
+    const val = queryParams[field];
+    if (typeof val === "string") return [val];
+    if (Array.isArray(val)) return val;
+    return [];
+  }
+
+  function constructQuery(queryParams: any) {
+    const idParam = normalizeParam("id", queryParams);
+    const subjectParam = normalizeParam("subjectId", queryParams)
+    const objectParam = normalizeParam("objectId", queryParams);
+    
+    /* maximal possible query:
+    {
+      $or: [
+        { subjectId: { $in: idParam } },
+        { objectId:  { $in: idParam } },
+        { 
+          subjectId: { $in: subjectParam },
+          objectId: { $in: objectParam },
+        }
+      ],
+    }
+    */
+  
+    type IdSearchValue = { $in: string[] };
     type MongoRelationsSearch = {
       subjectId?: IdSearchValue;
       objectId?: IdSearchValue;
     };
-    type Fields = "subjectId" | "objectId";
 
-    let search: MongoRelationsSearch = {};
+    const $and: MongoRelationsSearch | undefined =
+      (subjectParam.length || objectParam.length) ? {
+        subjectId: subjectParam.length ? { $in: subjectParam } : void 0,
+        objectId:  objectParam.length  ? { $in: objectParam  } : void 0,
+      } : void 0;
 
-    function constructQuery(field: Fields | "id", queryParams: any) {
-      const fieldNames: Fields[] = field === "id" ? ["subjectId", "objectId"] : [field];
-      if (typeof queryParams[field] === "string") {
-        fieldNames.forEach(n => search[n] = queryParams[field]);
-      }
-      else if (Array.isArray(queryParams[field])) {
-        fieldNames.forEach(n => search[n] = { $in: queryParams[field] });
-      }
+    if (idParam.length) {
+      const $or: MongoRelationsSearch[] = [
+        { subjectId: { $in: idParam } },
+        { objectId:  { $in: idParam } },
+      ];
+
+      $and && $or.push($and);
+
+      return { $or };
     }
 
-    ["subjectId", "objectId", "id"].forEach(field => constructQuery(field as Fields | "id", req.query));
+    return $and;
+  }
 
-    const query: MongoRelationsSearch[] = Object.entries(search).map((e: [string, IdSearchValue | undefined]) => { return { [e[0]]: e[1] } });
-    if (query.length === 0) {
-      res.status(400).send(JSON.stringify({status: 400, error: "Invalid id key."}));
+  app.get('/api/v1/relations', (req, res) => {
+    const query = constructQuery(req.query);
+    
+    if (!query) {
+      res.status(400).send(JSON.stringify({
+        status: 400, error: "Missing resource id keys",
+      }));
       return;
     }
 
-    Relation.find({$or: query}, function (err: Error, relations: any[]) {
-      if(err) {res.status(400).send(JSON.stringify({status: 400, error: err}));}
-      else {
-        res.status(200).send(JSON.stringify({status: 200, relations: relations.map(fixId)}));
+    Relation.find(query, (err: Error, relations: any[]) => {
+      if(err) {
+        res.status(400).send(JSON.stringify({ status: 400, error: err }));
+      } else {
+        res.status(200).send(JSON.stringify({
+          status: 200,
+          relations: relations.map(fixId),
+        }));
       }
     });
   });
