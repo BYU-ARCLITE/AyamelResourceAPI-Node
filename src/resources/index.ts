@@ -12,15 +12,14 @@ const Relation = mongoose.model('relations', relationSchema);
 
 export default async function(app: Express) {
 
-  app.get('/api/v1/resources', (_, res) => {
-    Resource.find().distinct('_id', function (err: Error, resources: string[]) {
-      if(err) {res.status(500).send(JSON.stringify({status: 500, ...err}));}
-      else {
-        res.status(200).send(JSON.stringify({status: 200, ids: resources}));
-      }
-    });
+  app.get('/api/v1/resources', async (_, res) => {
+    try {
+      const ids: string[] = await Resource.find().distinct('_id').exec();
+      res.status(200).send(JSON.stringify({ status: 200, ids }));
+    } catch (error) {
+      res.status(500).send(JSON.stringify({ status: 500, error }));
+    }
   });
-
 
   // TODO: build this
   app.get('/api/v1/resources/search', (_, res) => {
@@ -56,15 +55,12 @@ export default async function(app: Express) {
         req.params.id,
         { $set: { 'content.files': files } },
         { new: true },
-      );
+      ).exec();
 
       fixId(resource);
-      res.status(200).send({
-        status: 200,
-        resource: resource,
-      });
-    } catch (err) {
-      res.status(500).send(JSON.stringify({status: 500, error: err}));
+      res.status(200).send({ status: 200, resource });
+    } catch (error) {
+      res.status(500).send(JSON.stringify({ status: 500, error }));
     }
   });
 
@@ -74,48 +70,59 @@ export default async function(app: Express) {
    * (see post '/api/v1/resources/:id/content/:token')
    */
 
-  app.post('/api/v1/resources', authorizeRequest, (req, res) => {
-    Resource.create(req.body, function (err, resource) {
-      if (err) { res.status(500).send(JSON.stringify({status: 500, err})); }
-      else {
-        res.status(200);
-        res.send(JSON.stringify({
-          status: 200,
-          resource: { id: resource._id },
-          contentUploadUrl: `/api/v1/resources/${resource._id}/content/dummytoken-${resource._id}`,
-        }));
-      }
-    });
+  app.post('/api/v1/resources', authorizeRequest, async (req, res) => {
+    try {
+      const resource = await Resource.create(req.body);
+      res.status(200).send(JSON.stringify({
+        status: 200,
+        resource: { id: resource._id },
+        contentUploadUrl: `/api/v1/resources/${resource._id}/content/dummytoken-${resource._id}`,
+      }));
+    } catch (error) {
+      res.status(500).send(JSON.stringify({ status: 500, error }));
+    }
   });
 
   /**
    * Update a resource
    */
   app.put('/api/v1/resources/:id', authorizeRequest, async (req, res) => {
-    const id = req.params.id;
-    Resource.findByIdAndUpdate(id, req.body, {runValidators: true, new: true}, function (err, resource) {
-      if (err) {
-        res.status(500).send(JSON.stringify({status: 500, error: err}));
+    const id = req.params.id;    
+    const { body: resource } = req;
+    const newdoc = { ...resource };
+    delete newdoc.id;
+    newdoc._id = id;
+
+    try {
+      const doc = await Resource.findById(id).exec();
+      if (!doc) {
+        await Resource.create(newdoc);
+        res.status(200).send(JSON.stringify({ status: 200, resource }));
+      } else {
+        doc.overwrite(newdoc);
+        await doc.save();
       }
-      else {
-        res.status(200).send(JSON.stringify({status: 200, resource}));
-      }
-    });
+
+      res.status(200).send(JSON.stringify({ status: 200, resource }));
+    } catch (error) {
+      res.status(500).send(JSON.stringify({ status: 500, error }));
+    }
   });
 
   app.get('/api/v1/resources/:id', async (req, res) => {
     const id = req.params.id;
-    const docp = Resource.findById(id);
+    const docp = Resource.findById(id).exec();
     // Get all the relations for which this resource
     // is an argument (subject or object).
     const relp = Relation
-      .find({ $or: [ { subjectId: id }, { objectId: id } ] });
+      .find({ $or: [ { subjectId: id }, { objectId: id } ] })
+      .exec();
     let doc, rels;
 
     try {
       [doc, rels] = await Promise.all([docp, relp]);
-    } catch(err) {
-      res.status(500).send(JSON.stringify({status: 500, error: err}));
+    } catch (error) {
+      res.status(500).send(JSON.stringify({ status: 500, error }));
       return;
     }
 
@@ -129,21 +136,18 @@ export default async function(app: Express) {
 
       // merge relations into returned resource document
       doc.relations = rels;
-      res.status(200);
-      res.send(JSON.stringify({ status: 200, resource: doc }));
+      res.status(200).send(JSON.stringify({ status: 200, resource: doc }));
     } else {
-      res.status(404);
-      res.send(JSON.stringify({status: 404}));
+      res.status(404).send(JSON.stringify({ status: 404 }));
     }
   });
 
   app.delete('/api/v1/resources/:id', authorizeRequest, async (req, res) => {
     const id = req.params.id;
     try {
-      const count: number = await Resource.countDocuments({ _id: id });
+      const count: number = await Resource.countDocuments({ _id: id }).exec();
       if (count === 0) {
-        res.status(404);
-        res.send(JSON.stringify({status: 404}));
+        res.status(404).send(JSON.stringify({status: 404}));
         return;
       }
 
@@ -151,13 +155,14 @@ export default async function(app: Express) {
       // resource is an argument (subject or object).
       const relIds: { _id: string }[] = await Relation
         .find({ $or: [ { subjectId: id }, { objectId: id } ] })
-        .select('_id');
+        .select('_id')
+        .exec();
 
       // delete all associated relations
-      await Promise.all(relIds.map(({ _id }) => Relation.findByIdAndDelete(_id)));
+      await Promise.all(relIds.map(({ _id }) => Relation.findByIdAndDelete(_id).exec()));
 
       // delete the actual resource
-      await Resource.findByIdAndDelete(id);
+      await Resource.findByIdAndDelete(id).exec();
 
       res.status(200);
       res.send(JSON.stringify({status: 200}));
